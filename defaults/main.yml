@@ -1,0 +1,149 @@
+---
+
+zookeeper_installation_type: "docker"        # Available options: host, docker
+zookeeper_node_hostname: "{{ ansible_facts.fqdn }}"    # Optional hostname
+
+##########################
+###     DISK MOUNTS    ###
+##########################
+zookeeper_main_mount_dir: "/srv"
+zookeeper_disk_mounts:
+  - src: "/dev/sdb"
+    dest: "{{ zookeeper_main_mount_dir }}"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+    fstype: "ext4"
+    fs_opts: "-m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard"
+    mount_opts: "discard,defaults,nofail"
+    state: mounted
+
+#############################
+###     SYSTEM CONFIGS    ###
+#############################
+
+### By default the official Zookeeper Docker image uses UID:GID 1000:1000. The user/group name does not matter, we just need to make sure the Zookeeper directories on the host machine are owned by the correct UID and GID  
+zookeeper_owner_docker:
+  name: ""
+  uid: "1000"
+
+zookeeper_group_docker:
+  name: ""
+  gid: "1000"
+
+######################################
+###     ZOOKEEPER LISTEN PORTS    ###
+######################################
+zookeeper_main_port: 2181
+zookeeper_service_port_1: 2888
+zookeeper_service_port_2: 3888
+zookeeper_metrics_port: 7070
+
+
+zookeeper_server_templates_dir: "zookeeper-server"
+
+###################################################
+###     ZOOKEEPER DIRECTORIES [DOCKER HOST]    ###
+###################################################
+zookeeper_main_data_dir: "{{ zookeeper_main_mount_dir }}/zookeeper-data"
+zookeeper_auth_dir: "{{ zookeeper_main_mount_dir }}/zookeeper-auth"
+zookeeper_datalog_dir: "{{ zookeeper_main_mount_dir }}/zookeeper-datalog"
+
+zookeeper_main_data_dir_container: "/data"
+zookeeper_auth_dir_container: "/opt/auth"
+zookeeper_datalog_dir_container: "/datalog"
+
+zookeeper_directories_container:
+  - host_dir: "{{ zookeeper_main_data_dir }}"
+    owner: "{{ zookeeper_owner_docker['uid'] }}"
+    group: "{{ zookeeper_group_docker['gid'] }}"
+    mode: "0750"
+  - host_dir: "{{ zookeeper_auth_dir }}"
+    owner: "{{ zookeeper_owner_docker['uid'] }}"
+    group: "{{ zookeeper_group_docker['gid'] }}"
+    mode: "0750"
+  - host_dir: "{{ zookeeper_datalog_dir }}"
+    owner: "{{ zookeeper_owner_docker['uid'] }}"
+    group: "{{ zookeeper_group_docker['gid'] }}"
+    mode: "0750"
+
+
+#############################
+###     ZOOKEEPER FILES   ###
+#############################
+zookeeper_auth_config_file: "zookeeper-server.jaas"
+
+zookeeper_files_container:
+  - src: "{{ zookeeper_server_templates_dir }}/{{ zookeeper_auth_config_file }}.j2"
+    dest: "{{ zookeeper_auth_dir }}/{{ zookeeper_auth_config_file }}"
+    owner: "{{ zookeeper_owner_docker['uid'] }}"
+    group: "{{ zookeeper_group_docker['gid'] }}"
+    mode: "0440"
+
+
+zookeeper_version: "3.6.2"
+
+################################
+###     ZOOKEEPER CONFIG    ###
+################################
+zookeeper_docker_network: "zookeeper"
+
+zookeeper_docker_env_vars:
+  ZOO_MY_ID: "{{ hostvars[inventory_hostname]['zookeeper_myid'] }}"
+  ZOO_SERVERS: "{{ zookeeper_servers }}"
+  ZOO_TICK_TIME: "2000"
+  #### The length of a single tick, which is the basic time unit used by ZooKeeper, as measured in milliseconds. It is used to regulate heartbeats, and timeouts.
+  ### For example, the minimum session timeout will be two ticks
+  ZOO_INIT_LIMIT: "30000"
+  #### Amount of time, in ticks (see tickTime), to allow followers to connect and sync to a leader. Increased this value as needed, if the amount of data managed
+  ### by ZooKeeper is large.
+  ZOO_SYNC_LIMIT: "10"
+  # Amount of time, in ticks (see tickTime), to allow followers to sync with ZooKeeper. If followers fall too far behind a leader, they will be dropped.
+  ZOO_MAX_CLIENT_CNXNS: "2000"
+  # Limits the number of concurrent connections (at the socket level) that a single client, identified by IP address, may make to a single member of the ZooKeeper ensemble.
+  ZOO_AUTOPURGE_PURGEINTERVAL: "12"
+  # The time interval in hours for which the purge task has to be triggered. Set to a positive integer (1 and above) to enable the auto purging. Defaults to 0.
+  ZOO_AUTOPURGE_SNAPRETAINCOUNT: "100"
+  ### When enabled, ZooKeeper auto purge feature retains the autopurge.snapRetainCount most recent snapshots and the corresponding transaction logs in the dataDir
+  ### and dataLogDir respectively and deletes the rest. Defaults to 3. Minimum value is 3.
+  ZOO_STANDALONE_ENABLED: "false"
+  ### Prior to 3.5.0, one could run ZooKeeper in Standalone mode or in a Distributed mode. These are separate implementation stacks, and switching between them during
+  ### run time is not possible. By default (for backward compatibility) standaloneEnabled is set to true. The consequence of using this default is that if started
+  ### with a single server the ensemble will not be allowed to grow, and if started with more than one server it will not be allowed to shrink to contain fewer than
+  ### two participants.
+  ZOO_CFG_EXTRA: "maxSessionTimeout=60000000 preAllocSize=131072 snapCount=3000000 metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort={{ zookeeper_metrics_port | default(7070) }}"
+  JVMFLAGS: "-Xms128M -Xmx2G -verbose:gc -XX:+PrintGCDetails -XX:+PrintSafepointStatistics -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -Dzookeeper.authProvider.sasl=org.apache.zookeeper.server.auth.SASLAuthenticationProvider -Djava.security.auth.login.config={{ zookeeper_auth_dir_container }}/{{ zookeeper_auth_config_file }}"
+
+zookeeper_docker_log_options:
+  max-file: 10
+  max-size: "100m"
+
+zookeeper_config:
+  global:
+    major_version: "{{ zookeeper_version.split('.')[0] }}"
+    status_check_retries: "20"  # a number of retries when checking the node status
+    status_check_delay: "15"    # a delay in seconds when checking the node status
+  docker_opts:
+    container_name: "zookeeper"
+    image_name: "zookeeper"
+    image_tag: "{{ zookeeper_version }}"
+    command: "{{ zookeeper_command | default(omit) }}"
+    ports:
+      - "{{ zookeeper_main_port }}:{{ zookeeper_main_port }}"
+      - "{{ zookeeper_service_port_1 }}:{{ zookeeper_service_port_1 }}"
+      - "{{ zookeeper_service_port_2 }}:{{ zookeeper_service_port_2 }}"
+      - "{{ zookeeper_metrics_port }}:{{ zookeeper_metrics_port }}"
+    env_vars: "{{ zookeeper_docker_env_vars | default(omit) }}"
+    volumes:
+      - "{{ zookeeper_main_data_dir }}:{{ zookeeper_main_data_dir_container }}"
+      - "{{ zookeeper_datalog_dir }}:{{ zookeeper_datalog_dir_container }}"
+      - "{{ zookeeper_auth_dir }}:{{ zookeeper_auth_dir_container }}"
+    hostname: "{{ zookeeper_node_hostname | default(omit) }}"
+    networks:
+      - name: "{{ zookeeper_docker_network }}"
+    network_mode: "{{ zookeeper_docker_network_mode | default(omit) }}"
+    log_options: "{{ zookeeper_docker_log_options | default(omit) }}"
+    ulimits: "{{ zookeeper_limits_docker | default(omit) }}"
+    capabilities: "{{ zookeeper_linux_capabilities_docker | default(omit) }}"
+    security_opts: "{{ zookeeper_docker_security_opts | default(omit) }}"
+

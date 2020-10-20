@@ -1,0 +1,31 @@
+---
+
+- name: ZOOKEEPER DISK CONFIG TASK | Ensure That the Filesystem Is Created
+  filesystem:
+    fstype: "{{ item.fstype }}"
+    dev: "{{ item.src }}"
+    opts: "{{ item.fs_opts }}"
+    force: no
+  with_items: "{{ zookeeper_disk_mounts }}"
+  when: zookeeper_disk_mounts is defined and zookeeper_disk_mounts != ""
+
+- name: ZOOKEEPER DISK CONFIG TASK | Ensure That the Mount Directories Exist
+  file:
+    path: "{{ item.dest }}"
+    state: directory
+    owner: "{{ item.owner | default('owner') }}"
+    group: "{{ item.group | default('group') }}"
+    mode: "{{ item.mode | default(0755) }}"
+  with_items: "{{ zookeeper_disk_mounts }}"
+
+- name: ZOOKEEPER DISK CONFIG TASK | Ensure That the Disk Is Mounted
+  mount:
+    path: "{{ item.dest }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype }}"
+    opts: "{{ item.mount_opts }}"
+    state: "{{ item.state }}"
+  with_items: "{{ zookeeper_disk_mounts }}"
+  notify:
+    - "restart_zookeeper_docker"
+  when: zookeeper_disk_mounts is defined and zookeeper_disk_mounts != ""

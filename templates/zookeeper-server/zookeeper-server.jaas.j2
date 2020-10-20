@@ -1,0 +1,17 @@
+#jinja2:lstrip_blocks: True
+Server {
+    org.apache.zookeeper.server.auth.DigestLoginModule required
+{% for item in zookeeper_users %}
+    user_{{ item.user }}="{{ item.password }}"
+{% endfor %}
+;
+};
+
+Client {
+       org.apache.zookeeper.server.auth.DigestLoginModule required
+{% for item in zookeeper_users %}
+       username="{{ item.user }}"
+       password="{{ item.password }}"
+{% endfor %}
+;
+};

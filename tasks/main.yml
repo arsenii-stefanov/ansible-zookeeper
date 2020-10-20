@@ -1,0 +1,20 @@
+---
+
+### SERVER CONFIGURATION
+- name: ZOOKEEPER MAIN TASK | Include Disk Configuration Task [Common]
+  include_tasks: "15-disk-config.yml"
+  when:
+    - zookeeper_disk_mounts is defined
+    - zookeeper_disk_mounts != ""
+  tags: [always]
+
+### ZOOKEEPER SERVER CONFIGURATION
+- name: ZOOKEEPER MAIN TASK | Include Config task [Docker]
+  include_tasks: "20-zookeeper-config-docker.yml"
+  when: zookeeper_installation_type == "docker"
+  tags: [always]
+
+### ZOOKEEPER INSTALLATION
+- name: ZOOKEEPER MAIN TASK | Include Zookeeper Installation Task [Docker]
+  include_tasks: "30-zookeeper-install-docker.yml"
+  when: zookeeper_installation_type == "docker"

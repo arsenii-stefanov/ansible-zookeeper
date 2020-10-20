@@ -1,0 +1,30 @@
+---
+
+- name: ZOOKEEPER INSTALLATION TASK | Ensure That Docker Networks Exist
+  docker_network:
+    name: "{{ item.name }}"
+  with_items: "{{ zookeeper_config['docker_opts']['networks'] }}"
+
+- name: ZOOKEEPER INSTALLATION TASK | Start Docker Container
+  docker_container:
+    name: "{{ zookeeper_config['docker_opts']['container_name'] }}"
+    image: "{{ zookeeper_config['docker_opts']['image_name'] }}:{{ zookeeper_config['docker_opts']['image_tag'] }}"
+    state: started
+    restart_policy: always
+    detach: yes
+    interactive: yes
+    tty: yes
+    command: "{{ zookeeper_config['docker_opts']['command'] | default(omit) }}"
+    ports: "{{ zookeeper_config['docker_opts']['ports'] | default(omit) }}"
+    env: "{{ zookeeper_config['docker_opts']['env_vars'] | default(omit) }}"
+    volumes: "{{ zookeeper_config['docker_opts']['volumes'] | default(omit) }}"
+    ulimits: "{{ zookeeper_config['docker_opts']['ulimits'] | default(omit) }}"
+    capabilities: "{{ zookeeper_config['docker_opts']['capabilities'] | default(omit) }}"
+    security_opts: "{{ zookeeper_config['docker_opts']['security_opts'] | default(omit) }}"
+    log_driver: "{{ zookeeper_config['docker_opts']['log_driver'] | default(omit) }}"
+    log_options: "{{ zookeeper_config['docker_opts']['log_options'] | default(omit) }}"
+    hostname: "{{ zookeeper_config['docker_opts']['hostname'] | default(omit) }}"
+    network_mode: "{{ zookeeper_config['docker_opts']['network_mode'] | default(omit) }}"
+    networks: "{{ zookeeper_config['docker_opts']['networks'] | default(omit) }}"
+    purge_networks: "{{ zookeeper_config['docker_opts']['purge_networks'] | default(omit) }}"
+  no_log: "{{ item.no_log | default(false) }}"

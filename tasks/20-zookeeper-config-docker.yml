@@ -1,0 +1,36 @@
+---
+
+- name: ZOOKEEPER CONFIG TASK | Ensure That Directories Exist [Docker]
+  file:
+    path: "{{ item.host_dir }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  notify:
+    - "restart_zookeeper_docker"
+  with_items: "{{ zookeeper_directories_container }}"
+
+- name: ZOOKEEPER CONFIG TASK | Ensure That Config Files Exist [Docker]
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  notify:
+    - "restart_zookeeper_docker"
+  with_items: "{{ zookeeper_files_container }}"
+
+- name: ZOOKEEPER CONFIG TASK | Get Zookeeper Servers List
+  set_fact:
+    zookeeper_servers: >-
+      {% for host in groups['zookeeper'] -%}
+        {% if host == inventory_hostname -%}
+        server.{{ hostvars[host]['zookeeper_myid'] }}=0.0.0.0:{{ zookeeper_service_port_1 }}:{{ zookeeper_service_port_2 }};{{ zookeeper_main_port }}{% else -%}
+        server.{{ hostvars[host]['zookeeper_myid'] }}={{ hostvars[host]['ansible_host'] }}:{{ zookeeper_service_port_1 }}:{{ zookeeper_service_port_2 }};{{ zookeeper_main_port }}{% endif -%}
+        {%- if not loop.last %} {% endif -%}
+      {%- endfor %}
+
+- debug:
+    msg: "{{ zookeeper_servers }}"

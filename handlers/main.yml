@@ -1,0 +1,8 @@
+---
+
+- name: healthcheck_zookeeper_docker
+  command: "docker exec -i {{ zookeeper_config['docker_opts']['container_name'] }} sh -c 'zkServer.sh status'"
+
+- name: restart_zookeeper_docker
+  command: "docker restart {{ zookeeper_config['docker_opts']['container_name'] }}"
+  notify: "healthcheck_zookeeper_docker"
