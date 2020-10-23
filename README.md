@@ -137,6 +137,12 @@ docker_packages_ubuntu: [ "docker-ce" ]
 ###     ZOOKEEPER SERVER CONFIGS     ###
 ########################################
 
+zookeeper_cluster_use_dns: true
+zookeeper_nodes_dns:
+  - "zk-ch-stg-1.{{ hostvars['zk-ch-stg-1'].gce_zone }}.c.{{ gcp_project_id }}.internal"
+  - "zk-ch-stg-2.{{ hostvars['zk-ch-stg-2'].gce_zone }}.c.{{ gcp_project_id }}.internal"
+  - "zk-ch-stg-3.{{ hostvars['zk-ch-stg-3'].gce_zone }}.c.{{ gcp_project_id }}.internal"
+
 zookeeper_version: "3.6.2"
 
 zookeeper_docker_network: "zookeeper"
