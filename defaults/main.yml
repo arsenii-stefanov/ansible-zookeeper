@@ -3,6 +3,13 @@
 zookeeper_installation_type: "docker"        # Available options: host, docker
 zookeeper_node_hostname: "{{ ansible_facts.fqdn }}"    # Optional hostname
 
+zookeeper_cluster_use_dns: false
+zookeeper_nodes_dns: []
+# zookeeper_nodes_dns:
+#   - "zookeeper-1.example.internal"
+#   - "zookeeper-2.example.internal"
+#   - "zookeeper-3.example.internal"
+
 ##########################
 ###     DISK MOUNTS    ###
 ##########################

@@ -31,6 +31,18 @@
         server.{{ hostvars[host]['zookeeper_myid'] }}={{ hostvars[host]['ansible_host'] }}:{{ zookeeper_service_port_1 }}:{{ zookeeper_service_port_2 }};{{ zookeeper_main_port }}{% endif -%}
         {%- if not loop.last %} {% endif -%}
       {%- endfor %}
+  when: zookeeper_cluster_use_dns == false
+
+- name: ZOOKEEPER CONFIG TASK | Get Zookeeper Servers List
+  set_fact:
+    zookeeper_servers: >-
+      {% for host in zookeeper_nodes_dns -%}
+        {% if inventory_hostname in host.split('.')[0]  -%}
+        server.{{ hostvars[host.split('.')[0]]['zookeeper_myid'] }}=0.0.0.0:{{ zookeeper_service_port_1 }}:{{ zookeeper_service_port_2 }};{{ zookeeper_main_port }}{% else -%}
+        server.{{ hostvars[host.split('.')[0]]['zookeeper_myid'] }}={{ host }}:{{ zookeeper_service_port_1 }}:{{ zookeeper_service_port_2 }};{{ zookeeper_main_port }}{% endif -%}
+        {%- if not loop.last %} {% endif -%}
+      {%- endfor %}
+  when: zookeeper_cluster_use_dns == true
 
 - debug:
     msg: "{{ zookeeper_servers }}"
